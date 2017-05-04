@@ -10,9 +10,22 @@ export default class App extends React.Component {
     this.state = {
       breakLength: 1,
       sessionLength: 25,
+      clockLabel: 25,
+
       isRunning: false,
-      wheelButtonIcon: "play_arrow",
-      percentage: 0
+      isPaused: false,
+
+      sessionInterval: {
+        intervalID: null,
+        initialSeconds: null,
+        secondsLeft: null
+      },
+      breakInterval: {
+        intervalID: null,
+        initialSeconds: null,
+        secondsLeft: null
+      },
+      percentage: 100
     }
   }
 
@@ -20,34 +33,88 @@ export default class App extends React.Component {
     return {
       breakLength: 1,
       sessionLength: 25,
+      clockLabel: 25,
+
       isRunning: false,
-      wheelButtonIcon: "play_arrow",
-      percentage: 0
+      isPaused: false,
+
+      sessionInterval: {
+        intervalID: null,
+        initialSeconds: null,
+        secondsLeft: null
+      },
+      breakInterval: {
+        intervalID: null,
+        initialSeconds: null,
+        secondsLeft: null
+      },
+      percentage: 100
     }
   }
 
   handleLengthChange(whichLength, change){
     let thisState = Object.assign({}, this.state);
-    let bl = thisState.breakLength;
-    let sl = thisState.sessionLength;
+    if(!thisState.isRunning){
+      let {breakLength, sessionLength} = thisState;
 
-    if(whichLength === "break"){
-      bl += change;
-    }else{
-      sl += change;
+      if(whichLength === "break"){
+        breakLength += change;
+      }else{
+        sessionLength += change;
+      }
+      if((breakLength > 0 && breakLength < 60) && (sessionLength > 0 && sessionLength < 60)){
+        this.setState({clockLabel: sessionLength,breakLength: breakLength, sessionLength: sessionLength});
+      }
     }
+  }
 
-    if((bl > 0 && bl < 60) && (sl > 0 && sl < 60)){
-      this.setState({breakLength: bl, sessionLength: sl});
+  decrementSession(){
+    let thisState = Object.assign({}, this.state);
+    let sessionInterval = thisState.sessionInterval;
+
+    sessionInterval.secondsLeft--;
+
+    let clockLabelMinutes = Math.floor(sessionInterval.secondsLeft / 60);
+    let clockLabelSeconds = sessionInterval.secondsLeft % 60;
+
+    let percentage = (sessionInterval.secondsLeft / sessionInterval.initialSeconds) * 100;
+
+    if(sessionInterval.secondsLeft !== 0 ){
+      this.setState({
+        clockLabel: clockLabelMinutes + ':' + clockLabelSeconds,
+        percentage: percentage,
+        sessionInterval: sessionInterval
+      });
+    }else{
+
     }
   }
 
   handleCircleClick(){
     let thisState = Object.assign({}, this.state);
 
-    if(thisState.isRunning){
+    if(!thisState.isRunning){
+      // if clicked while not running (paused, or to start)
+      if(!thisState.isPaused){
+        // to start
+        let SintervalId = setInterval(this.decrementSession.bind(this), 1000);
+        let initialSeconds = thisState.sessionLength * 60;
 
+        this.setState({
+          isRunning: true,
+          sessionInterval: {
+            intervalID: SintervalId,
+            initialSeconds: initialSeconds,
+            secondsLeft: initialSeconds
+          }
+        });
+      }else{
+        // paused
+      }
     }else{
+      //let sessionInterval = thisState.sessionInterval;
+
+
 
     }
   }
@@ -84,8 +151,10 @@ export default class App extends React.Component {
         <div className="row">
           <div className="col s12">
             <Clock
-              icon={this.state.wheelButtonIcon}
-              percent={this.state.percent}
+              isRunning={this.state.isRunning}
+              clockLabel={this.state.clockLabel}
+              percentage={this.state.percentage}
+              onButtonClick={this.handleCircleClick.bind(this)}
             />
           </div>
         </div>
