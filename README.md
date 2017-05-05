@@ -1,7 +1,7 @@
 # Podomoro
 
-Another freeCodeCamp Project and my second React App.
-Available [here](https://matheuscorreia.github.io/podomoro)
+Another freeCodeCamp project and my second React App.
+Available [here](https://matheuscorreia.github.io/podomoro/)
 
 <!-- This project was bootstrapped with [Create React App](https://github.com/facebookincubator/create-react-app).
 

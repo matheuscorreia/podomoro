@@ -2,6 +2,8 @@ import React from 'react';
 import Length from './Length';
 import Clock from './Clock';
 
+import {inBetween, setTimer} from '../helpers/';
+
 import '../main.css';
 
 export default class App extends React.Component {
@@ -10,113 +12,90 @@ export default class App extends React.Component {
     this.state = {
       breakLength: 1,
       sessionLength: 25,
-      clockLabel: 25,
-
       isRunning: false,
-      isPaused: false,
-
-      sessionInterval: {
-        intervalID: null,
-        initialSeconds: null,
-        secondsLeft: null
-      },
-      breakInterval: {
-        intervalID: null,
-        initialSeconds: null,
-        secondsLeft: null
-      },
-      percentage: 100
-    }
-  }
-
-  getInitialState(){
-    return {
-      breakLength: 1,
-      sessionLength: 25,
-      clockLabel: 25,
-
-      isRunning: false,
-      isPaused: false,
-
-      sessionInterval: {
-        intervalID: null,
-        initialSeconds: null,
-        secondsLeft: null
-      },
-      breakInterval: {
-        intervalID: null,
-        initialSeconds: null,
-        secondsLeft: null
-      },
-      percentage: 100
+      breakOrSession: null,
+      secondsOnStart: 1500,
+      secondsLeft: 1500,
+      intervalID: null
     }
   }
 
   handleLengthChange(whichLength, change){
-    let thisState = Object.assign({}, this.state);
-    if(!thisState.isRunning){
-      let {breakLength, sessionLength} = thisState;
-
-      if(whichLength === "break"){
-        breakLength += change;
-      }else{
-        sessionLength += change;
-      }
-      if((breakLength > 0 && breakLength < 60) && (sessionLength > 0 && sessionLength < 60)){
-        this.setState({clockLabel: sessionLength,breakLength: breakLength, sessionLength: sessionLength});
-      }
+    let {breakLength, sessionLength} = this.state;
+    if(whichLength === "break"){
+      breakLength += change;
+    }else{
+      sessionLength += change;
+    }
+    if(!this.state.isRunning && inBetween(breakLength, 0, 60) && inBetween(sessionLength, 0, 60)){
+      let secondsUpdated = sessionLength * 60;
+      this.setState({
+        breakLength: breakLength,
+        sessionLength: sessionLength,
+        secondsOnStart: secondsUpdated,
+        secondsLeft: secondsUpdated
+      });
     }
   }
 
-  decrementSession(){
-    let thisState = Object.assign({}, this.state);
-    let sessionInterval = thisState.sessionInterval;
+  handleStartClick(){
 
-    sessionInterval.secondsLeft--;
+    if(!this.state.isRunning){
+      this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
 
-    let clockLabelMinutes = Math.floor(sessionInterval.secondsLeft / 60);
-    let clockLabelSeconds = sessionInterval.secondsLeft % 60;
+      let seconds = this.state.secondsOnStart;
 
-    let percentage = (sessionInterval.secondsLeft / sessionInterval.initialSeconds) * 100;
+      let interval = setTimer(seconds,
+        // Callback on each second
+        () => {
+          let secondsLeft = this.state.secondsLeft;
+          secondsLeft--;
+          this.setState({
+            secondsLeft: secondsLeft
+          });
+        },
+        // Callback when finished
+        () => {
+          let seconds = this.state.breakOrSession === "session" ? this.state.breakLength * 60 : this.state.sessionLength * 60;
+          let breakOrSession = this.state.breakOrSession === "session" ? "break" : "session";
 
-    if(sessionInterval.secondsLeft !== 0 ){
+          this.setState({
+            breakOrSession: breakOrSession,
+            secondsOnStart: seconds,
+            secondsLeft: seconds,
+          });
+
+          if(breakOrSession === "session"){
+            this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
+          }else{
+            this.sendNotification("Phew! Time to take a break...", "Go outside, take some fresh air and come back in " + this.state.breakLength + " minutes");
+          }
+
+          return seconds;
+      });
+
       this.setState({
-        clockLabel: clockLabelMinutes + ':' + clockLabelSeconds,
-        percentage: percentage,
-        sessionInterval: sessionInterval
+        isRunning: true,
+        breakOrSession: "session",
+        intervalID: interval
       });
     }else{
+      clearInterval(this.state.intervalID);
 
+      this.setState({
+        isRunning: false,
+        intervalID: null
+      });
     }
   }
 
-  handleCircleClick(){
-    let thisState = Object.assign({}, this.state);
-
-    if(!thisState.isRunning){
-      // if clicked while not running (paused, or to start)
-      if(!thisState.isPaused){
-        // to start
-        let SintervalId = setInterval(this.decrementSession.bind(this), 1000);
-        let initialSeconds = thisState.sessionLength * 60;
-
-        this.setState({
-          isRunning: true,
-          sessionInterval: {
-            intervalID: SintervalId,
-            initialSeconds: initialSeconds,
-            secondsLeft: initialSeconds
-          }
-        });
-      }else{
-        // paused
-      }
-    }else{
-      //let sessionInterval = thisState.sessionInterval;
-
-
-
-    }
+  sendNotification(title, body){
+    new Notification(title, {
+      body: body,
+      tag: "Podomoro",
+      icon: "img/Sonya-Swarm-Turkey.ico",
+      img: "img/Sonya-Swarm-Turkey.ico"
+    });
   }
 
   render(){
@@ -132,7 +111,7 @@ export default class App extends React.Component {
         <div className="row">
           <div className="col s6">
             <Length
-              label="Break Length"
+              label="Break"
               whichLength="break"
               value={this.state.breakLength}
               onLengthChange={this.handleLengthChange.bind(this)}
@@ -140,7 +119,7 @@ export default class App extends React.Component {
           </div>
           <div className="col s6">
             <Length
-              label="Session Length"
+              label="Session"
               whichLength="session"
               value={this.state.sessionLength}
               onLengthChange={this.handleLengthChange.bind(this)}
@@ -151,10 +130,10 @@ export default class App extends React.Component {
         <div className="row">
           <div className="col s12">
             <Clock
+              secondsOnStart={this.state.secondsOnStart}
+              secondsLeft={this.state.secondsLeft}
               isRunning={this.state.isRunning}
-              clockLabel={this.state.clockLabel}
-              percentage={this.state.percentage}
-              onButtonClick={this.handleCircleClick.bind(this)}
+              onStartClick={this.handleStartClick.bind(this)}
             />
           </div>
         </div>
