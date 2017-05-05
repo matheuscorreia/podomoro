@@ -2,7 +2,7 @@ import React from 'react';
 import Length from './Length';
 import Clock from './Clock';
 
-import {inBetween, setTimer} from '../helpers/';
+import {inBetween, setTimer, mobileCheck} from '../helpers/';
 
 import '../main.css';
 
@@ -40,9 +40,12 @@ export default class App extends React.Component {
 
   handleStartClick(){
 
-    if(!this.state.isRunning){
-      this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
+    let isOnMobile = mobileCheck();
 
+    if(!this.state.isRunning){
+      if(!isOnMobile){
+        this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
+      }
       let seconds = this.state.secondsOnStart;
 
       let interval = setTimer(seconds,
@@ -65,10 +68,12 @@ export default class App extends React.Component {
             secondsLeft: seconds,
           });
 
-          if(breakOrSession === "session"){
-            this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
-          }else{
-            this.sendNotification("Phew! Time to take a break...", "Go outside, take some fresh air and come back in " + this.state.breakLength + " minutes");
+          if(!isOnMobile){
+            if(breakOrSession === "session"){
+              this.sendNotification("Go to work!!", "Your work session time has started, we will get back to you when you're done");
+            }else{
+              this.sendNotification("Phew! Time to take a break...", "Go outside, take some fresh air and come back in " + this.state.breakLength + " minutes");
+            }
           }
 
           return seconds;
